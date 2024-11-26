@@ -1,28 +1,27 @@
 #!/bin/env python
 
 import os
+import tempfile
 
-def pyhf2hf(infile):
+def pyhf2hf(infile, outdir):
     from pyhf.cli.rootio import json2xml
-    json2xml.callback(infile, 'tmp', 'config', 'data', 'FitConfig', [])
+    json2xml.callback(infile, outdir, 'config', 'data', 'FitConfig', [])
 
-def hf2ws():
-    os.system('hist2workspace ./tmp/FitConfig.xml')
+def hf2ws(configdir):
+    os.system(f'hist2workspace {configdir}/FitConfig.xml')
 
-def ws2hs3(outfile):
+def ws2hs3(outfile, rootdir):
     import ROOT, glob
-    infile = ROOT.TFile.Open(*glob.glob('./tmp/config/FitConfig_combined*.root'),"READ")
+    infile = ROOT.TFile.Open(*glob.glob(f'{rootdir}/config/FitConfig_combined*.root'),"READ")
     ws = infile.Get("combined")
     tool = ROOT.RooJSONFactoryWSTool(ws)
     tool.exportJSON(outfile)
 
 def main(infile, outfile):
-    pyhf2hf(infile)
-    hf2ws()
-    ws2hs3(outfile)
-    if os.path.isdir('./tmp'):
-        import shutil
-        shutil.rmtree('./tmp')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pyhf2hf(infile, tmpdir)
+        hf2ws(tmpdir)
+        ws2hs3(outfile, tmpdir)
 
 if __name__ == "__main__":
     """
